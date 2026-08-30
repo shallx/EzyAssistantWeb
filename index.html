@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Weekly Wages Calculator</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          boxShadow: {
+            soft: '0 12px 35px rgba(15, 23, 42, 0.08)'
+          }
+        }
+      }
+    };
+  </script>
+</head>
+<body class="min-h-screen bg-slate-100 text-slate-900">
+  <main class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <header class="mb-6">
+      <p class="mb-2 text-sm font-semibold uppercase tracking-[0.2em] text-indigo-600">Payroll tool</p>
+      <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <h1 class="text-3xl font-bold tracking-tight sm:text-4xl">Weekly Wages Calculator</h1>
+          <p class="mt-2 max-w-2xl text-slate-600">Enter hours and minutes, apply each worker's rate and adjustment, then copy the final wage list.</p>
+        </div>
+
+        <div class="w-full rounded-2xl bg-white p-4 shadow-soft lg:w-auto lg:min-w-[360px]">
+          <label for="calculationDate" class="text-sm font-semibold text-slate-700">Calculation date</label>
+          <div class="mt-2 flex flex-col gap-3 sm:flex-row sm:items-center">
+            <input id="calculationDate" type="date" class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100" />
+            <div class="shrink-0 rounded-xl bg-indigo-50 px-4 py-2.5 text-sm font-semibold text-indigo-700" id="weekRange">—</div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <section class="mb-6 grid gap-6 lg:grid-cols-[1.5fr_1fr]">
+      <div class="rounded-2xl bg-white p-5 shadow-soft">
+        <div class="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 class="text-lg font-bold">Quick paste</h2>
+            <p class="text-sm text-slate-500">One worker per line, for example: <span class="font-medium">Rahi 56h 30m</span></p>
+          </div>
+          <button id="applyPasteBtn" type="button" class="rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700">Apply pasted hours</button>
+        </div>
+        <textarea id="bulkInput" rows="6" placeholder="Rahi 56h 30m&#10;Turzo 20h&#10;Sarabon 50h&#10;Fardin 30h 30m" class="w-full rounded-xl border border-slate-300 px-4 py-3 font-mono text-sm outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100"></textarea>
+        <p id="pasteMessage" class="mt-2 min-h-5 text-sm text-slate-500"></p>
+      </div>
+
+      <div class="rounded-2xl bg-slate-900 p-5 text-white shadow-soft">
+        <p class="text-sm font-semibold uppercase tracking-[0.18em] text-slate-400">Rules included</p>
+        <div class="mt-4 space-y-3 text-sm">
+          <div class="flex items-center justify-between rounded-xl bg-white/10 px-4 py-3"><span>Rahi</span><span class="font-semibold">$22/hr − $350</span></div>
+          <div class="flex items-center justify-between rounded-xl bg-white/10 px-4 py-3"><span>Niaz</span><span class="font-semibold">$22/hr</span></div>
+          <div class="flex items-center justify-between rounded-xl bg-white/10 px-4 py-3"><span>Turzo</span><span class="font-semibold">$20/hr + $50</span></div>
+          <div class="flex items-center justify-between rounded-xl bg-white/10 px-4 py-3"><span>Fardin</span><span class="font-semibold">$20/hr − $350</span></div>
+          <p class="pt-1 text-slate-400">All other preset workers use $20 per hour. You can edit any value below.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="rounded-2xl bg-white shadow-soft">
+      <div class="flex flex-col gap-3 border-b border-slate-200 p-5 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 class="text-lg font-bold">Workers</h2>
+          <p class="text-sm text-slate-500">Only workers with entered time appear in the final output.</p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <button id="addWorkerBtn" type="button" class="rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-500">+ Add worker</button>
+          <button id="clearHoursBtn" type="button" class="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Clear hours</button>
+          <button id="resetBtn" type="button" class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm font-semibold text-rose-700 transition hover:bg-rose-100">Reset defaults</button>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="min-w-[920px] w-full">
+          <thead class="bg-slate-50 text-left text-xs font-bold uppercase tracking-wider text-slate-500">
+            <tr>
+              <th class="px-5 py-3">Name</th>
+              <th class="px-3 py-3">Rate / hour</th>
+              <th class="px-3 py-3">Hours</th>
+              <th class="px-3 py-3">Minutes</th>
+              <th class="px-3 py-3">Adjustment</th>
+              <th class="px-3 py-3 text-right">Amount</th>
+              <th class="px-5 py-3 text-right">Action</th>
+            </tr>
+          </thead>
+          <tbody id="workersBody" class="divide-y divide-slate-100"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="mt-6 grid gap-6 lg:grid-cols-[1fr_360px]">
+      <div class="rounded-2xl bg-white p-5 shadow-soft">
+        <div class="mb-4 flex items-center justify-between gap-3">
+          <div>
+            <h2 class="text-lg font-bold">Copyable output</h2>
+            <p class="text-sm text-slate-500">Format: worker name and final amount only.</p>
+          </div>
+          <button id="copyBtn" type="button" class="rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50">Copy results</button>
+        </div>
+        <textarea id="resultOutput" rows="10" readonly placeholder="Results will appear here..." class="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 font-mono text-sm outline-none"></textarea>
+        <p id="copyMessage" class="mt-2 min-h-5 text-sm text-slate-500"></p>
+      </div>
+
+      <aside class="rounded-2xl bg-indigo-600 p-6 text-white shadow-soft">
+        <p class="text-sm font-semibold uppercase tracking-[0.18em] text-indigo-200">Weekly total</p>
+        <p id="grandTotal" class="mt-3 text-5xl font-bold tracking-tight">$0</p>
+        <p id="workerCount" class="mt-3 text-sm text-indigo-100">0 workers included</p>
+        <div class="mt-6 rounded-xl bg-white/10 p-4 text-sm text-indigo-50">
+          Calculation: <span class="font-semibold">(hours + minutes ÷ 60) × rate + adjustment</span>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <template id="workerRowTemplate">
+    <tr class="worker-row hover:bg-slate-50/70">
+      <td class="px-5 py-3">
+        <input data-field="name" type="text" class="w-full min-w-[170px] rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100" />
+      </td>
+      <td class="px-3 py-3">
+        <div class="relative">
+          <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">$</span>
+          <input data-field="rate" type="number" min="0" step="0.01" class="w-28 rounded-lg border border-slate-300 py-2 pl-7 pr-3 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100" />
+        </div>
+      </td>
+      <td class="px-3 py-3">
+        <input data-field="hours" type="number" min="0" step="1" value="0" class="w-24 rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100" />
+      </td>
+      <td class="px-3 py-3">
+        <input data-field="minutes" type="number" min="0" max="59" step="1" value="0" class="w-24 rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100" />
+      </td>
+      <td class="px-3 py-3">
+        <div class="relative">
+          <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">$</span>
+          <input data-field="adjustment" type="number" step="0.01" class="w-32 rounded-lg border border-slate-300 py-2 pl-7 pr-3 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100" />
+        </div>
+      </td>
+      <td data-field="amount" class="px-3 py-3 text-right text-base font-bold text-slate-900">$0</td>
+      <td class="px-5 py-3 text-right">
+        <button data-action="remove" type="button" class="rounded-lg px-3 py-2 text-sm font-semibold text-rose-600 transition hover:bg-rose-50">Remove</button>
+      </td>
+    </tr>
+  </template>
+
+  <script>
+    // Change these values manually whenever your regular workers, rates, or adjustments change.
+    const DEFAULT_WORKERS = [
+      { name: 'Sarabon', rate: 20, adjustment: 0 },
+      { name: 'Rahi', rate: 22, adjustment: -350 },
+      { name: 'Fardin', rate: 20, adjustment: -350 },
+      { name: 'Turzo', rate: 20, adjustment: 50 },
+      { name: 'Mahdi', rate: 20, adjustment: 0 },
+      { name: 'Rudro', rate: 20, adjustment: 0 },
+      { name: 'Aryan', rate: 20, adjustment: 0 },
+      { name: 'Niaz', rate: 22, adjustment: 0 }
+    ];
+
+    const DEFAULT_NEW_WORKER_RATE = 20;
+
+    const workersBody = document.getElementById('workersBody');
+    const rowTemplate = document.getElementById('workerRowTemplate');
+    const resultOutput = document.getElementById('resultOutput');
+    const grandTotal = document.getElementById('grandTotal');
+    const workerCount = document.getElementById('workerCount');
+    const copyBtn = document.getElementById('copyBtn');
+    const copyMessage = document.getElementById('copyMessage');
+    const calculationDate = document.getElementById('calculationDate');
+    const weekRange = document.getElementById('weekRange');
+    const bulkInput = document.getElementById('bulkInput');
+    const pasteMessage = document.getElementById('pasteMessage');
+
+    function numberValue(input, fallback = 0) {
+      const value = Number(input.value);
+      return Number.isFinite(value) ? value : fallback;
+    }
+
+    function formatMoney(value, includeSymbol = true) {
+      const rounded = Math.round((value + Number.EPSILON) * 100) / 100;
+      const formatted = Number.isInteger(rounded)
+        ? String(rounded)
+        : rounded.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
+      return includeSymbol ? `$${formatted}` : formatted;
+    }
+
+    function addWorker(worker = { name: '', rate: DEFAULT_NEW_WORKER_RATE, adjustment: 0 }) {
+      const row = rowTemplate.content.firstElementChild.cloneNode(true);
+      row.querySelector('[data-field="name"]').value = worker.name ?? '';
+      row.querySelector('[data-field="rate"]').value = worker.rate ?? DEFAULT_NEW_WORKER_RATE;
+      row.querySelector('[data-field="adjustment"]').value = worker.adjustment ?? 0;
+      row.querySelector('[data-field="hours"]').value = worker.hours ?? 0;
+      row.querySelector('[data-field="minutes"]').value = worker.minutes ?? 0;
+
+      row.querySelectorAll('input').forEach((input) => {
+        input.addEventListener('input', calculateAll);
+        input.addEventListener('change', () => normalizeTimeFields(row));
+      });
+
+      row.querySelector('[data-action="remove"]').addEventListener('click', () => {
+        row.remove();
+        calculateAll();
+      });
+
+      workersBody.appendChild(row);
+      calculateAll();
+      return row;
+    }
+
+    function normalizeTimeFields(row) {
+      const hoursInput = row.querySelector('[data-field="hours"]');
+      const minutesInput = row.querySelector('[data-field="minutes"]');
+
+      let hours = Math.max(0, Math.floor(numberValue(hoursInput)));
+      let minutes = Math.max(0, Math.floor(numberValue(minutesInput)));
+
+      if (minutes >= 60) {
+        hours += Math.floor(minutes / 60);
+        minutes %= 60;
+      }
+
+      hoursInput.value = hours;
+      minutesInput.value = minutes;
+      calculateAll();
+    }
+
+    function getRowData(row) {
+      const name = row.querySelector('[data-field="name"]').value.trim();
+      const rate = Math.max(0, numberValue(row.querySelector('[data-field="rate"]')));
+      const hours = Math.max(0, numberValue(row.querySelector('[data-field="hours"]')));
+      const minutes = Math.max(0, numberValue(row.querySelector('[data-field="minutes"]')));
+      const adjustment = numberValue(row.querySelector('[data-field="adjustment"]'));
+      const totalHours = hours + minutes / 60;
+      const amount = totalHours * rate + adjustment;
+
+      return { name, rate, hours, minutes, adjustment, totalHours, amount };
+    }
+
+    function calculateAll() {
+      const included = [];
+      let total = 0;
+
+      document.querySelectorAll('.worker-row').forEach((row) => {
+        const data = getRowData(row);
+        row.querySelector('[data-field="amount"]').textContent = data.totalHours > 0 ? formatMoney(data.amount) : '$0';
+
+        if (data.name && data.totalHours > 0) {
+          included.push(data);
+          total += data.amount;
+        }
+      });
+
+      resultOutput.value = included.map((worker) => `${worker.name}: ${formatMoney(worker.amount, false)}`).join('\n');
+      grandTotal.textContent = formatMoney(total);
+      workerCount.textContent = `${included.length} worker${included.length === 1 ? '' : 's'} included`;
+      copyBtn.disabled = included.length === 0;
+    }
+
+    function parseDateInput(value) {
+      const [year, month, day] = value.split('-').map(Number);
+      return new Date(year, month - 1, day);
+    }
+
+    function dateToInputValue(date) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
+    function formatDate(date) {
+      return new Intl.DateTimeFormat('en-AU', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric'
+      }).format(date);
+    }
+
+    function updateWeekRange() {
+      if (!calculationDate.value) return;
+      const selected = parseDateInput(calculationDate.value);
+      const day = selected.getDay();
+      const daysSinceMonday = (day + 6) % 7;
+
+      const monday = new Date(selected);
+      monday.setDate(selected.getDate() - daysSinceMonday);
+
+      const sunday = new Date(monday);
+      sunday.setDate(monday.getDate() + 6);
+
+      weekRange.textContent = `${formatDate(monday)} – ${formatDate(sunday)}`;
+    }
+
+    function findWorkerRow(name) {
+      const target = name.trim().toLowerCase();
+      return [...document.querySelectorAll('.worker-row')].find((row) => {
+        return row.querySelector('[data-field="name"]').value.trim().toLowerCase() === target;
+      });
+    }
+
+    function parseBulkLine(line) {
+      const clean = line.trim();
+      if (!clean) return null;
+
+      const hourMatch = clean.match(/(\d+(?:\.\d+)?)\s*h(?:ours?)?/i);
+      const minuteMatch = clean.match(/(\d+(?:\.\d+)?)\s*m(?:in(?:ute)?s?)?/i);
+
+      if (!hourMatch && !minuteMatch) return null;
+
+      const firstTimeIndex = Math.min(
+        hourMatch ? hourMatch.index : Infinity,
+        minuteMatch ? minuteMatch.index : Infinity
+      );
+
+      const name = clean.slice(0, firstTimeIndex).replace(/[-,:]+$/, '').trim();
+      if (!name) return null;
+
+      let hours = hourMatch ? Number(hourMatch[1]) : 0;
+      let minutes = minuteMatch ? Number(minuteMatch[1]) : 0;
+
+      // Convert decimal hours into hours and minutes.
+      const wholeHours = Math.floor(hours);
+      minutes += Math.round((hours - wholeHours) * 60);
+      hours = wholeHours;
+
+      hours += Math.floor(minutes / 60);
+      minutes %= 60;
+
+      return { name, hours, minutes };
+    }
+
+    function applyBulkInput() {
+      const lines = bulkInput.value.split(/\r?\n/);
+      let applied = 0;
+      let skipped = 0;
+
+      lines.forEach((line) => {
+        if (!line.trim()) return;
+        const parsed = parseBulkLine(line);
+
+        if (!parsed) {
+          skipped += 1;
+          return;
+        }
+
+        let row = findWorkerRow(parsed.name);
+        if (!row) {
+          row = addWorker({ name: parsed.name, rate: DEFAULT_NEW_WORKER_RATE, adjustment: 0 });
+        }
+
+        row.querySelector('[data-field="hours"]').value = parsed.hours;
+        row.querySelector('[data-field="minutes"]').value = parsed.minutes;
+        applied += 1;
+      });
+
+      calculateAll();
+      pasteMessage.textContent = applied
+        ? `Applied ${applied} line${applied === 1 ? '' : 's'}${skipped ? `; skipped ${skipped} invalid line${skipped === 1 ? '' : 's'}` : ''}.`
+        : 'No valid lines found. Use a format such as “Rahi 56h 30m”.';
+      pasteMessage.className = `mt-2 min-h-5 text-sm ${applied ? 'text-emerald-600' : 'text-rose-600'}`;
+    }
+
+    function clearHours() {
+      document.querySelectorAll('.worker-row').forEach((row) => {
+        row.querySelector('[data-field="hours"]').value = 0;
+        row.querySelector('[data-field="minutes"]').value = 0;
+      });
+      bulkInput.value = '';
+      pasteMessage.textContent = '';
+      calculateAll();
+    }
+
+    function resetDefaults() {
+      workersBody.innerHTML = '';
+      DEFAULT_WORKERS.forEach(addWorker);
+      bulkInput.value = '';
+      pasteMessage.textContent = '';
+      copyMessage.textContent = '';
+      calculateAll();
+    }
+
+    async function copyResults() {
+      if (!resultOutput.value) return;
+
+      try {
+        await navigator.clipboard.writeText(resultOutput.value);
+        copyMessage.textContent = 'Results copied.';
+        copyMessage.className = 'mt-2 min-h-5 text-sm text-emerald-600';
+      } catch (error) {
+        resultOutput.focus();
+        resultOutput.select();
+        document.execCommand('copy');
+        copyMessage.textContent = 'Results copied.';
+        copyMessage.className = 'mt-2 min-h-5 text-sm text-emerald-600';
+      }
+    }
+
+    document.getElementById('addWorkerBtn').addEventListener('click', () => {
+      const row = addWorker();
+      row.querySelector('[data-field="name"]').focus();
+    });
+    document.getElementById('clearHoursBtn').addEventListener('click', clearHours);
+    document.getElementById('resetBtn').addEventListener('click', resetDefaults);
+    document.getElementById('applyPasteBtn').addEventListener('click', applyBulkInput);
+    copyBtn.addEventListener('click', copyResults);
+    calculationDate.addEventListener('change', updateWeekRange);
+
+    calculationDate.value = dateToInputValue(new Date());
+    updateWeekRange();
+    resetDefaults();
+  </script>
+</body>
+</html>
